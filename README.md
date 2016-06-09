@@ -1,1 +1,1 @@
-# react-native-screenshot
+# react-native-scroll-screenshot
