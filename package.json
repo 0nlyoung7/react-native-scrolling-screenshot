@@ -1,29 +1,36 @@
 {
-  "name": "react-native-webview-screenshot",
+  "name": "react-native-scrolling-screenshot",
   "version": "0.0.1",
-  "description": "xpush client for React Native",
-  "main": "lib",
+  "description": "Screenshot Util for React Native",
+  "main": "index.js",
   "directories": {
-    "lib": "lib"
+    "ios": "ios"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:0nlyoung7/eact-native-screenshot.git"
+    "url": "git@github.com:0nlyoung7/eact-native-scrolling-screenshot.git"
   },
   "keywords": [
     "react-native",
     "react-component",
     "ios",
     "android",
-    "screenshot"
+    "screenshot",
+    "scroll"
   ],
-  "author": "James",
+  "author": "0nlyoung7",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/0nlyoung7/react-native-screenshot/issues"
+    "url": "https://github.com/0nlyoung7/react-native-scrolling-screenshot/issues"
   },
-  "homepage": "https://github.com/0nlyoung7/react-native-screenshot"
+  "homepage": "https://github.com/0nlyoung7/react-native-scrolling-screenshot",
+  "peerDependencies": {
+    "react-native": ">=0.5.0"
+  },
+  "devDependencies": {
+    "react-native": "latest"
+  }
 }

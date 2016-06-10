@@ -1,10 +1,10 @@
-#import "ScrollScreenshot.h"
+#import "ScrollingScreenshot.h"
 #import "RCTConvert.h"
 #import "RCTBridge.h"
 #import "RCTView.h"
 #import "RCTUIManager.h"
 
-@implementation ScrollScreenshot
+@implementation ScrollingScreenshot
 
 RCT_EXPORT_MODULE()
 
