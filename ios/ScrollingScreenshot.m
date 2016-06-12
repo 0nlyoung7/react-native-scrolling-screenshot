@@ -35,7 +35,7 @@ RCT_EXPORT_MODULE()
   } else {
     UIGraphicsBeginImageContext(scrollView.contentSize);
   }
-
+  
   {
     scrollView.contentOffset = CGPointZero;
     scrollView.frame = CGRectMake(0, 0, scrollView.contentSize.width, scrollView.contentSize.height);
@@ -55,7 +55,7 @@ RCT_EXPORT_MODULE()
   scrollView.frame = savedFrame;
   
   if (image != nil) {
-    [UIImagePNGRepresentation(image) writeToFile: @"/tmp/test.png" atomically: YES];
+    [UIImagePNGRepresentation(image) writeToFile: @"temp.jpg" atomically: YES];
     UIImageWriteToSavedPhotosAlbum(image,
                                    self, // send the message to 'self' when calling the callback
                                    @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
@@ -73,65 +73,72 @@ RCT_EXPORT_MODULE()
   CGPoint savedContentOffset = scrollView.contentOffset;
   CGRect savedFrame = scrollView.frame;
   
-  NSMutableArray * imageList =[[NSMutableArray alloc] init];
-  UIImage *firstImage;
-  
-  scrollView.contentOffset = CGPointZero;
-  for (NSInteger index = 0; index < until; index++){
+  @autoreleasepool {
     
-    CGFloat offsetVirtical = ((CGFloat)index ) * screenHeight;
-    [scrollView setContentOffset:CGPointMake(0, offsetVirtical ) animated:NO];
-  
-    UIGraphicsBeginImageContextWithOptions(scrollView.contentSize, NO, 0.0);
-    CGContextTranslateCTM(UIGraphicsGetCurrentContext(), 0, -offsetVirtical);
-    [scrollView.layer renderInContext: UIGraphicsGetCurrentContext()];
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    //NSMutableArray *imageList =[[NSMutableArray alloc] init];
+    NSMutableArray *imageList = [NSMutableArray arrayWithCapacity:until];
+    UIImage *firstImage;
+    
+    scrollView.contentOffset = CGPointZero;
+    for (NSInteger index = 0; index < until; index++){
+      
+      CGFloat offsetVirtical = ((CGFloat)index ) * screenHeight;
+      [scrollView setContentOffset:CGPointMake(0, offsetVirtical ) animated:NO];
+      
+      UIGraphicsBeginImageContextWithOptions(scrollView.contentSize, NO, 0.0);
+      CGContextTranslateCTM(UIGraphicsGetCurrentContext(), 0, -offsetVirtical);
+      [scrollView.layer renderInContext: UIGraphicsGetCurrentContext()];
+      UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+      UIGraphicsEndImageContext();
+      
+      if (image != nil) {
+        CGImageRef imageRef = [image CGImage];
+        CGImageRef tempImage = CGImageCreateWithImageInRect(imageRef, CGRectMake(0,0,scrollView.frame.size.width*image.scale, scrollView.frame.size.height*image.scale));
+        image = [UIImage imageWithCGImage:tempImage];
+        CGImageRelease(tempImage);
+        
+        if( index == 0 ){
+          firstImage = image;
+        }
+        
+        [imageList addObject:image];
+        [NSThread sleepForTimeInterval:0.2];
+      }
+    }
+    
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(scrollView.contentSize.width*[UIScreen mainScreen].scale, scrollView.contentSize.height*[UIScreen mainScreen].scale) , NO, firstImage.scale);
+    NSInteger index = 0;
+    for (UIImage __weak *image in imageList)
+    {
+      [image drawInRect:CGRectMake(0, (image.size.height*index),image.size.width, image.size.height)];
+      index++;
+    }
+    
+    UIImage *finalImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
-    if (image != nil) {
-      CGImageRef imageRef = [image CGImage];
-      CGImageRef tempImage = CGImageCreateWithImageInRect(imageRef, CGRectMake(0,0,scrollView.frame.size.width*image.scale, scrollView.frame.size.height*image.scale));
-      image = [UIImage imageWithCGImage:tempImage];
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *basePath =  [paths objectAtIndex:0];
+    
+    NSString *filePath = [basePath stringByAppendingString:@"/temp.jpg"];
+    NSError *error;
+    
+    NSData *data = UIImageJPEGRepresentation(finalImage, 0.5);
+    
+    BOOL writeSucceeded = [data writeToFile:filePath options:0 error:&error];
+    if (!writeSucceeded) {
+      NSLog( @"error occured to save in document" );
+    } else {
+      NSLog( @"saved in document %@", filePath  );
+      finalImage = nil;
+      imageList = nil;
       
-      if( index == 0 ){
-        firstImage = image;
-      }
-      
-      [imageList  addObject:image];
-      [NSThread sleepForTimeInterval:0.2];
+      UIImage *image = [UIImage imageWithContentsOfFile:filePath];
+      UIImageWriteToSavedPhotosAlbum(image,
+                                     self, // send the message to 'self' when calling the callback
+                                     @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
+                                     NULL); // you generally won't need a contextInfo here
     }
-  }
-  
-  UIGraphicsBeginImageContextWithOptions(CGSizeMake(scrollView.contentSize.width*[UIScreen mainScreen].scale, scrollView.contentSize.height*[UIScreen mainScreen].scale) , NO, firstImage.scale);
-  NSInteger index = 0;
-  for (UIImage *image in imageList)
-  {
-    [image drawInRect:CGRectMake(0, (image.size.height*index),image.size.width, image.size.height)];
-    index++;
-  }
-  
-  UIImage *finalImage = UIGraphicsGetImageFromCurrentImageContext();
-  UIGraphicsEndImageContext();
-  
-  UIImageWriteToSavedPhotosAlbum(finalImage,
-                                 self, // send the message to 'self' when calling the callback
-                                 @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
-                                 NULL); // you generally won't need a contextInfo here
-  
-  
-  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-  NSString *basePath =  [paths objectAtIndex:0];
-  
-  NSString *filePath = [basePath stringByAppendingString:@"/temp.png"];
-  NSError *error;
-  
-  NSData *data = UIImagePNGRepresentation(finalImage);
-  
-  BOOL writeSucceeded = [data writeToFile:filePath options:0 error:&error];
-  if (!writeSucceeded) {
-    NSLog( @"error occured to save in document" );
-  } else {
-    NSLog( @"saved in document" );
   }
   
   [scrollView setContentOffset:savedContentOffset animated:NO];
@@ -152,7 +159,6 @@ RCT_EXPORT_MODULE()
     }
   }
 }
-
 
 - (UIScrollView *) findUIScrollView:(UIView *) view{
   UIScrollView *result = nil;
@@ -183,7 +189,7 @@ RCT_EXPORT_METHOD(takeScreenshot:(nonnull NSNumber *)reactTag
   UIView *view = [self.bridge.uiManager viewForReactTag:reactTag];
   UIScrollView *scrollView = [self findUIScrollView:view];
   if( scrollView != nil ){
-     [self screenshot:scrollView];
+    [self screenshot:scrollView];
   }
 }
 
