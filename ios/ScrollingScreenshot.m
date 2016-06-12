@@ -3,6 +3,7 @@
 #import "RCTBridge.h"
 #import "RCTView.h"
 #import "RCTUIManager.h"
+#import  <QuartzCore/QuartzCore.h>
 
 @implementation ScrollingScreenshot
 
@@ -15,8 +16,10 @@ RCT_EXPORT_MODULE()
   return dispatch_get_main_queue();
 }
 
+#define IS_RETINA ([[UIScreen mainScreen] respondsToSelector:@selector(displayLinkWithTarget:selector:)] && ([UIScreen mainScreen].scale >= 2.0))
 
-- (void) screenshot:(UIScrollView *)scrollView {
+
+- (void) screenshotForIOS9:(UIScrollView *)scrollView {
   UIImage* image = nil;
   
   CGFloat totalHeight = scrollView.contentSize.height;
@@ -27,29 +30,32 @@ RCT_EXPORT_MODULE()
   CGPoint savedContentOffset = scrollView.contentOffset;
   CGRect savedFrame = scrollView.frame;
   
-  UIGraphicsBeginImageContextWithOptions(scrollView.contentSize, YES, 0.0);
-  CGContextRef context = UIGraphicsGetCurrentContext();
+  if( IS_RETINA ){
+    UIGraphicsBeginImageContextWithOptions(scrollView.contentSize, scrollView.opaque, 0.0);
+  } else {
+    UIGraphicsBeginImageContext(scrollView.contentSize);
+  }
+
   {
     scrollView.contentOffset = CGPointZero;
     scrollView.frame = CGRectMake(0, 0, scrollView.contentSize.width, scrollView.contentSize.height);
     for (NSInteger index = 0; index < until; index++){
-      
       CGFloat offsetVirtical = ((CGFloat)index ) * screenHeight;
       [scrollView setContentOffset:CGPointMake(0, offsetVirtical ) animated:YES];
-      [NSThread sleepForTimeInterval:0.1];
+      [NSThread sleepForTimeInterval:0.2];
     }
     
-    [scrollView.layer renderInContext: context];
+    [scrollView.layer renderInContext: UIGraphicsGetCurrentContext()];
     image = UIGraphicsGetImageFromCurrentImageContext();
-    
-    [scrollView setContentOffset:savedContentOffset animated:YES];
-    [NSThread sleepForTimeInterval:0.1];
-    scrollView.frame = savedFrame;
+    UIGraphicsEndImageContext();
   }
-  UIGraphicsEndImageContext();
+  
+  [scrollView setContentOffset:savedContentOffset animated:YES];
+  [NSThread sleepForTimeInterval:0.2];
+  scrollView.frame = savedFrame;
   
   if (image != nil) {
-    //[UIImagePNGRepresentation(image) writeToFile: @"/tmp/test.png" atomically: YES];
+    [UIImagePNGRepresentation(image) writeToFile: @"/tmp/test.png" atomically: YES];
     UIImageWriteToSavedPhotosAlbum(image,
                                    self, // send the message to 'self' when calling the callback
                                    @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
@@ -57,12 +63,87 @@ RCT_EXPORT_MODULE()
   }
 }
 
+- (void) screenshot:(UIScrollView *)scrollView {
+  
+  CGFloat contentHeight = scrollView.contentSize.height;
+  CGFloat screenHeight = scrollView.bounds.size.height;
+  
+  NSInteger until = (int)( ceil( contentHeight / screenHeight ) );
+  
+  CGPoint savedContentOffset = scrollView.contentOffset;
+  CGRect savedFrame = scrollView.frame;
+  
+  NSMutableArray * imageList =[[NSMutableArray alloc] init];
+  UIImage *firstImage;
+  
+  scrollView.contentOffset = CGPointZero;
+  for (NSInteger index = 0; index < until; index++){
+    
+    CGFloat offsetVirtical = ((CGFloat)index ) * screenHeight;
+    [scrollView setContentOffset:CGPointMake(0, offsetVirtical ) animated:NO];
+  
+    UIGraphicsBeginImageContextWithOptions(scrollView.contentSize, NO, 0.0);
+    CGContextTranslateCTM(UIGraphicsGetCurrentContext(), 0, -offsetVirtical);
+    [scrollView.layer renderInContext: UIGraphicsGetCurrentContext()];
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    if (image != nil) {
+      CGImageRef imageRef = [image CGImage];
+      CGImageRef tempImage = CGImageCreateWithImageInRect(imageRef, CGRectMake(0,0,scrollView.frame.size.width*image.scale, scrollView.frame.size.height*image.scale));
+      image = [UIImage imageWithCGImage:tempImage];
+      
+      if( index == 0 ){
+        firstImage = image;
+      }
+      
+      [imageList  addObject:image];
+      [NSThread sleepForTimeInterval:0.2];
+    }
+  }
+  
+  UIGraphicsBeginImageContextWithOptions(CGSizeMake(scrollView.contentSize.width*[UIScreen mainScreen].scale, scrollView.contentSize.height*[UIScreen mainScreen].scale) , NO, firstImage.scale);
+  NSInteger index = 0;
+  for (UIImage *image in imageList)
+  {
+    [image drawInRect:CGRectMake(0, (image.size.height*index),image.size.width, image.size.height)];
+    index++;
+  }
+  
+  UIImage *finalImage = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  
+  UIImageWriteToSavedPhotosAlbum(finalImage,
+                                 self, // send the message to 'self' when calling the callback
+                                 @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
+                                 NULL); // you generally won't need a contextInfo here
+  
+  
+  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  NSString *basePath =  [paths objectAtIndex:0];
+  
+  NSString *filePath = [basePath stringByAppendingString:@"/temp.png"];
+  NSError *error;
+  
+  NSData *data = UIImagePNGRepresentation(finalImage);
+  
+  BOOL writeSucceeded = [data writeToFile:filePath options:0 error:&error];
+  if (!writeSucceeded) {
+    NSLog( @"error occured to save in document" );
+  } else {
+    NSLog( @"saved in document" );
+  }
+  
+  [scrollView setContentOffset:savedContentOffset animated:NO];
+  scrollView.frame = savedFrame;
+}
+
 - (void)thisImage:(UIImage *)image hasBeenSavedInPhotoAlbumWithError:(NSError *)error usingContextInfo:(void*)ctxInfo
 {
   if (error) {
-    NSLog( @"error" );
+    NSLog( @"error occured to save in album" );
   } else {
-    NSLog( @"save success" );
+    NSLog( @"saved in album" );
     if (image !=NULL){
       image=nil;
     }
@@ -71,6 +152,7 @@ RCT_EXPORT_MODULE()
     }
   }
 }
+
 
 - (UIScrollView *) findUIScrollView:(UIView *) view{
   UIScrollView *result = nil;
