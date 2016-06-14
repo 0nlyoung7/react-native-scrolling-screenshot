@@ -16,54 +16,9 @@ RCT_EXPORT_MODULE()
   return dispatch_get_main_queue();
 }
 
-#define IS_RETINA ([[UIScreen mainScreen] respondsToSelector:@selector(displayLinkWithTarget:selector:)] && ([UIScreen mainScreen].scale >= 2.0))
+RCTResponseSenderBlock _callback;
 
-
-- (void) screenshotForIOS9:(UIScrollView *)scrollView {
-  UIImage* image = nil;
-  
-  CGFloat totalHeight = scrollView.contentSize.height;
-  CGFloat screenHeight = scrollView.bounds.size.height;
-  
-  NSInteger until = (int)( ceil( totalHeight / screenHeight ) );
-  
-  CGPoint savedContentOffset = scrollView.contentOffset;
-  CGRect savedFrame = scrollView.frame;
-  
-  if( IS_RETINA ){
-    UIGraphicsBeginImageContextWithOptions(scrollView.contentSize, scrollView.opaque, 0.0);
-  } else {
-    UIGraphicsBeginImageContext(scrollView.contentSize);
-  }
-  
-  {
-    scrollView.contentOffset = CGPointZero;
-    scrollView.frame = CGRectMake(0, 0, scrollView.contentSize.width, scrollView.contentSize.height);
-    for (NSInteger index = 0; index < until; index++){
-      CGFloat offsetVirtical = ((CGFloat)index ) * screenHeight;
-      [scrollView setContentOffset:CGPointMake(0, offsetVirtical ) animated:YES];
-      [NSThread sleepForTimeInterval:0.2];
-    }
-    
-    [scrollView.layer renderInContext: UIGraphicsGetCurrentContext()];
-    image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-  }
-  
-  [scrollView setContentOffset:savedContentOffset animated:YES];
-  [NSThread sleepForTimeInterval:0.2];
-  scrollView.frame = savedFrame;
-  
-  if (image != nil) {
-    [UIImagePNGRepresentation(image) writeToFile: @"temp.jpg" atomically: YES];
-    UIImageWriteToSavedPhotosAlbum(image,
-                                   self, // send the message to 'self' when calling the callback
-                                   @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
-                                   NULL); // you generally won't need a contextInfo here
-  }
-}
-
-- (void) screenshot:(UIScrollView *)scrollView {
+- (void) screenshot:(UIScrollView *)scrollView{
   
   CGFloat contentHeight = scrollView.contentSize.height;
   CGFloat screenHeight = scrollView.bounds.size.height;
@@ -75,7 +30,6 @@ RCT_EXPORT_MODULE()
   
   @autoreleasepool {
     
-    //NSMutableArray *imageList =[[NSMutableArray alloc] init];
     NSMutableArray *imageList = [NSMutableArray arrayWithCapacity:until];
     UIImage *firstImage;
     
@@ -102,7 +56,7 @@ RCT_EXPORT_MODULE()
         }
         
         [imageList addObject:image];
-        [NSThread sleepForTimeInterval:0.2];
+        [NSThread sleepForTimeInterval:0.1];
       }
     }
     
@@ -133,11 +87,11 @@ RCT_EXPORT_MODULE()
       finalImage = nil;
       imageList = nil;
       
-      UIImage *image = [UIImage imageWithContentsOfFile:filePath];
+      UIImage *image = [UIImage imageWithData:data];
       UIImageWriteToSavedPhotosAlbum(image,
-                                     self, // send the message to 'self' when calling the callback
-                                     @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
-                                     NULL); // you generally won't need a contextInfo here
+                                     self,
+                                     @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:),
+                                     NULL);
     }
   }
   
@@ -156,6 +110,9 @@ RCT_EXPORT_MODULE()
     }
     if(ctxInfo !=NULL){
       ctxInfo=nil;
+    }
+    if( _callback != nil ){
+      _callback(@[[NSNull null], @"saved in album"]);
     }
   }
 }
@@ -189,7 +146,10 @@ RCT_EXPORT_METHOD(takeScreenshot:(nonnull NSNumber *)reactTag
   UIView *view = [self.bridge.uiManager viewForReactTag:reactTag];
   UIScrollView *scrollView = [self findUIScrollView:view];
   if( scrollView != nil ){
+    _callback = callback;
     [self screenshot:scrollView];
+  } else {
+    // TODO : take Snapshot without scrollView;
   }
 }
 
