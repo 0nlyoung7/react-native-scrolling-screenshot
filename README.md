@@ -15,9 +15,10 @@ Add the .m and .h files to library folder in Xcode
 ## Usage
 
 ```
-var ScrollingScreenshot = require('react-native-scrolling-screenshot');
+import findNodeHandle from 'findNodeHandle';
+import ScrollingScreenshot from 'react-native-scrolling-screenshot';
 
-var ref = React.findNodeHandle(this.refs.webview);
+var ref = findNodeHandle(this.refs.webview);
 ScrollingScreenshot.takeScreenshot(ref, (error, result) => {
   if (error) {
     console.log(error);
