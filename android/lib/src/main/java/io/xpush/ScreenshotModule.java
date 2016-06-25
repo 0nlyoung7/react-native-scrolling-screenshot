@@ -46,8 +46,14 @@ public class ScreenshotModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void takeScreenshot(ReadableMap map, Callback callback) {
-        UIManagerModule uiManager = getReactApplicationContext().getNativeModule(UIManagerModule.class);
-        View view = uiManager.findSubviewIn();
+        UIManagerModule uiManager = mReactContext.getNativeModule(UIManagerModule.class);
+        /**
+        uiManager.addUIBlock(new UIBlock() {
+            public void execute (NativeViewHierarchyManager nvhm) {
+                View view = nvhm.resolveView(tag);
+            }
+        });
+         */
     }
 
     private String screenshot(View view) {

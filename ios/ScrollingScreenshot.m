@@ -18,6 +18,19 @@ RCT_EXPORT_MODULE()
 
 RCTResponseSenderBlock _callback;
 
+- (void) screenshotCurrent:(UIView *)view{
+  
+  // defaults: snapshot the same size as the view, with alpha transparency, with current device's scale factor
+  UIGraphicsBeginImageContextWithOptions(view.frame.size, NO, 0.0);
+  
+  [view drawViewHierarchyInRect:CGRectMake(0, 0, view.frame.size.width, view.frame.size.height) afterScreenUpdates:YES];
+  UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+  
+  UIGraphicsEndImageContext();
+  
+  [self saveImage:image];
+}
+
 - (void) screenshot:(UIScrollView *)scrollView{
   
   CGFloat contentHeight = scrollView.contentSize.height;
@@ -71,32 +84,37 @@ RCTResponseSenderBlock _callback;
     UIImage *finalImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *basePath =  [paths objectAtIndex:0];
-    
-    NSString *filePath = [basePath stringByAppendingString:@"/temp.jpg"];
-    NSError *error;
-    
-    NSData *data = UIImageJPEGRepresentation(finalImage, 0.5);
-    
-    BOOL writeSucceeded = [data writeToFile:filePath options:0 error:&error];
-    if (!writeSucceeded) {
-      NSLog( @"error occured to save in document" );
-    } else {
-      NSLog( @"saved in document %@", filePath  );
-      finalImage = nil;
-      imageList = nil;
-      
-      UIImage *image = [UIImage imageWithData:data];
-      UIImageWriteToSavedPhotosAlbum(image,
-                                     self,
-                                     @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:),
-                                     NULL);
-    }
+    [self saveImage:finalImage];
+    imageList = nil;
   }
   
   [scrollView setContentOffset:savedContentOffset animated:NO];
   scrollView.frame = savedFrame;
+}
+
+- (void) saveImage:(UIImage *)imageToSave {
+  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  NSString *basePath =  [paths objectAtIndex:0];
+  
+  NSString *filePath = [basePath stringByAppendingString:@"/temp.jpg"];
+  NSError *error;
+  
+  NSData *data = UIImageJPEGRepresentation(imageToSave, 0.5);
+  
+  BOOL writeSucceeded = [data writeToFile:filePath options:0 error:&error];
+  if (!writeSucceeded) {
+    NSLog( @"error occured to save in document" );
+    imageToSave = nil;
+  } else {
+    NSLog( @"saved in document %@", filePath );
+    imageToSave = nil;
+    UIImage *image = [UIImage imageWithData:data];
+    UIImageWriteToSavedPhotosAlbum(image,
+                                   self,
+                                   @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:),
+                                   NULL);
+  }
+  
 }
 
 - (void)thisImage:(UIImage *)image hasBeenSavedInPhotoAlbumWithError:(NSError *)error usingContextInfo:(void*)ctxInfo
@@ -143,13 +161,14 @@ RCTResponseSenderBlock _callback;
 RCT_EXPORT_METHOD(takeScreenshot:(nonnull NSNumber *)reactTag
                   callback:(RCTResponseSenderBlock)callback)
 {
+  _callback = callback;
+  
   UIView *view = [self.bridge.uiManager viewForReactTag:reactTag];
   UIScrollView *scrollView = [self findUIScrollView:view];
   if( scrollView != nil ){
-    _callback = callback;
     [self screenshot:scrollView];
   } else {
-    // TODO : take Snapshot without scrollView;
+    [self screenshotCurrent:view];
   }
 }
 
