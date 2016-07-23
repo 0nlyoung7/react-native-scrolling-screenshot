@@ -1,3 +1,4 @@
 rootProject.name = 'Example'
 
-include ':app'
+include ':app', ':react-native-scrolling-screenshot'
+project(':react-native-scrolling-screenshot').projectDir = new File(rootProject.projectDir, '../../android/lib')

@@ -28,9 +28,10 @@
   },
   "homepage": "https://github.com/0nlyoung7/react-native-scrolling-screenshot",
   "peerDependencies": {
-    "react-native": ">=0.5.0"
+    "react-native": ">=0.30.0"
   },
   "devDependencies": {
-    "react-native": "latest"
+    "react": "^15.2.0",
+    "react-native": "^0.30.0"
   }
 }

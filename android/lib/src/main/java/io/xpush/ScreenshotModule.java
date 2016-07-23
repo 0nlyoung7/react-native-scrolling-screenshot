@@ -18,6 +18,8 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.uimanager.NativeViewHierarchyManager;
+import com.facebook.react.uimanager.UIBlock;
 import com.facebook.react.uimanager.UIManagerModule;
 
 import java.io.File;
@@ -45,15 +47,20 @@ public class ScreenshotModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void takeScreenshot(ReadableMap map, Callback callback) {
+    public void takeScreenshot(final int reactTag, final Callback callback) {
         UIManagerModule uiManager = mReactContext.getNativeModule(UIManagerModule.class);
-        /**
         uiManager.addUIBlock(new UIBlock() {
             public void execute (NativeViewHierarchyManager nvhm) {
-                View view = nvhm.resolveView(tag);
+                View view = nvhm.resolveView(reactTag);
+                String result = null;
+                try {
+                    result = screenshot(view);
+                } catch( Exception e ){
+                    callback.invoke(e.getMessage());
+                }
+                callback.invoke(null,result);
             }
         });
-         */
     }
 
     private String screenshot(View view) {
@@ -97,6 +104,7 @@ public class ScreenshotModule extends ReactContextBaseJavaModule {
             Log.d("FileNotFoundException:", e.getMessage());
         } catch ( Exception e ){
             e.printStackTrace();
+            throw e;
         }
 
         return result;
