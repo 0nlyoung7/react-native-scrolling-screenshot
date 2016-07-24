@@ -12,12 +12,12 @@ import {
   AppRegistry,
   ReactNative,
   UIManager,
-  Image
+  Image,
+  findNodeHandle
 } from 'react-native';
 
 import ActionButton from 'react-native-action-button';
 
-import findNodeHandle from 'findNodeHandle';
 import ScrollingScreenshot from 'react-native-scrolling-screenshot';
 
 var HEADER = '#3b5998';
