@@ -1,6 +1,7 @@
 package com.example;
 
 import com.facebook.react.ReactActivity;
+import io.xpush.ScreenshotPackage ;
 
 public class MainActivity extends ReactActivity {
 
