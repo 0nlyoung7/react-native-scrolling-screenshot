@@ -5,7 +5,7 @@ var {
   NativeModules
 } = React;
 
-var NativeScrollingScreenshot = NativeModules.ScrollingScreenshot;
+var NativeScrollingScreenshot = NativeModules.RNScrollingScreenshot;
 
 var ScrollingScreenshot = {
   takeScreenshot: NativeScrollingScreenshot.takeScreenshot

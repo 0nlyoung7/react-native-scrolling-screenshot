@@ -45,6 +45,5 @@
 	</dict>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Select photo</string>
-
 </dict>
 </plist>
